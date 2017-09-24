@@ -58,6 +58,7 @@ add_library(
   SHARED 
   
   sparse-map/model.cpp
+  sparse-map/io_functions.cpp
 )
 
 add_executable(

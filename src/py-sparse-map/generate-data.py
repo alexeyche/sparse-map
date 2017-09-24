@@ -15,10 +15,16 @@ np.random.seed(1)
 c.batch_size = 1
 c.input_size = 5
 c.layer_size = 50
-c.filter_size = 2
+c.filter_size = 1
 c.tau = 5.0
 c["lambda"] = 0.05
-c.seq_size = 10
+c.seq_size = 100
+
+
+c.files.activation = "/artefacts/activation.bin"
+c.files.membrane = "/artefacts/membrane.bin"
+c.files.F = "/artefacts/F.bin"
+c.files.Fc = "/artefacts/Fc.bin"
 
 
 
