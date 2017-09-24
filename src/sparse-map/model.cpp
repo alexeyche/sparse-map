@@ -3,11 +3,20 @@
 namespace NSparseMap {
 
 
-	Model::Model(ui32 batchSize, ui32 size)
-		: Membrane(batchSize, size)
+	TModel::TModel(ui32 batchSize, ui32 inputSize, ui32 filterSize, ui32 layerSize)
+		: BatchSize(batchSize)
+		, InputSize(inputSize)
+		, FilterSize(filterSize)
+		, LayerSize(layerSize)
+		, Membrane(TMatrix::Zero(batchSize, layerSize))
 	{
-		std::cout << Membrane;
 	}
 
+
+	void TModel::Tick(const TMatrix& input) {
+		
+
+		
+	}
 
 } // NSparseMap

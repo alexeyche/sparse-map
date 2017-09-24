@@ -3,4 +3,3 @@
 set -ex
 
 docker build -t sm .
-

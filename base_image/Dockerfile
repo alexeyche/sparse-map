@@ -16,3 +16,5 @@ RUN git clone https://github.com/jbeder/yaml-cpp
 RUN cd yaml-cpp; cmake -DBUILD_SHARED_LIBS=ON .; make -j install
 
 ENV LD_LIBRARY_PATH "/usr/local/lib"
+
+RUN apt-get install -y libspdlog-dev
