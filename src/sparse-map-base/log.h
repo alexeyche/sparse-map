@@ -15,10 +15,10 @@ namespace NSparseMap {
         TLog()
         {
             Log = spdlog::stdout_logger_mt("console");
-            Log->set_pattern("LOG [%H:%M:%S %z] %v");
+            Log->set_pattern("LOG [%H:%M:%S.%e] %v");
         }
         void SetColors() {
-            Log->set_pattern("\x1b[32mLOG [%H:%M:%S %z] [thread %t]: %v\x1b[0m");
+            Log->set_pattern("\x1b[32mLOG [%H:%M:%S.%e] [t: %t]: %v\x1b[0m");
         }
 
         enum ELogLevel {INFO_LEVEL, DEBUG_LEVEL};

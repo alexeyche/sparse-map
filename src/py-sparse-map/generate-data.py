@@ -13,10 +13,11 @@ c = Config()
 np.random.seed(1)
 
 c.batch_size = 1
-c.input_size = 10
+c.input_size = 5
 c.layer_size = 50
-c.filter_size = 25
-
+c.filter_size = 2
+c.tau = 5.0
+c["lambda"] = 0.05
 c.seq_size = 10
 
 
@@ -24,10 +25,13 @@ c.seq_size = 10
 x_v = np.zeros((c.seq_size, c.batch_size, c.input_size))
 
 for bi in xrange(c.batch_size):
-    for si in xrange(c.seq_size):
-        for ni in xrange(c.input_size):
-            if np.random.random() < 0.05: #0.001:
-                x_v[si, bi, ni] = 1.0
+    for si in xrange(0, c.seq_size, 1):
+        x_v[si, bi, si % c.input_size] = 1.0
+
+    # for si in xrange(c.seq_size):
+    #     for ni in xrange(c.input_size):
+    #         if np.random.random() < 0.001:
+    #             x_v[si, bi, ni] = 1.0
 
 
 yaml.dump(dictionarize(c), open(env.yaml_config, "w"))
