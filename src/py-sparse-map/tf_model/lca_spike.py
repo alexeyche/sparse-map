@@ -7,16 +7,17 @@ import time
 from util import *
 
 from tf_model.hist_rnn import rnn_with_hist_loop_fn
-from config import Config
-from env import Env
-
+from tf_model.env import Env
+from tf_model.ts_pp import white_ts, generate_ts
 from tf_model.model import LCACell, normalize_weights, exp_poisson, poisson, LCAScalarCell
+
+from config import Config
+
 from tensorflow.contrib.rnn import MultiRNNCell
 
 import scikits.statsmodels.tsa.api as smt
 from scikits.statsmodels.tsa.arima_process import arma_generate_sample
 
-from ts_pp import white_ts, generate_ts
 
 from util import *
 
