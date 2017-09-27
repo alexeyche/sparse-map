@@ -29,7 +29,7 @@ x = tf.placeholder(tf.float32, shape=(batch_size, seq_size, 1, input_size), name
 
 t = tf.placeholder(tf.float32, shape=(), name="t")
 
-D_init = np.random.randn(filter_len, input_size, layer_size)*4.0
+D_init = np.random.randn(filter_len, input_size, layer_size)*10.0
 # D_init = generate_dct_dictionary(filter_len, layer_size).reshape((filter_len, input_size, layer_size))*0.1
 
 D = tf.Variable(D_init.reshape((filter_len, 1, input_size, layer_size)), dtype=tf.float32)
@@ -58,6 +58,23 @@ h_grad = tf.nn.conv2d(
 	padding='SAME', 
 	name="h_grad"
 )
+
+feedback = tf.nn.conv2d(
+	x_hat, 
+	D, 
+	strides=[1, 1, 1, 1], 
+	padding='SAME', 
+	name="feedback"
+)
+
+exc = tf.nn.conv2d(
+	x, 
+	D, 
+	strides=[1, 1, 1, 1], 
+	padding='SAME', 
+	name="exc"
+)
+
 
 new_h = shrink(h + step * h_grad/L, alpha/L)
 
@@ -93,16 +110,19 @@ e_m_arr, l_m_arr = [], []
 
 tol = 1e-04
 try:
-	for e in xrange(2000):
+	for e in xrange(100):
 
-		x_hat_v, h_v, L_v, h_grad_v, se_v, D_v = sess.run(
+		x_hat_v, h_v, L_v, h_grad_v, se_v, D_v, error_v, fb_v, exc_v = sess.run(
 			[
 				x_hat,
 				new_h,
 				L,
 				h_grad, 
 				se,
-				D
+				D,
+				error,
+				feedback,
+				exc
 			],
 			{
 				x: x_v,
@@ -122,7 +142,12 @@ try:
 except KeyboardInterrupt:
 	pass
 
+shl(exc_v-fb_v)
 # shl(np.asarray(e_m_arr), show=False)
-shl(h_v, show=False)
-shl(x_v, x_hat_v)
-
+# shl(h_v, show=False)
+# shl(x_v, x_hat_v, show=False)
+C = np.cov(np.squeeze(h_v).T)
+# shm(C, show=False)
+# shl(np.mean(C,0)/np.sum(np.mean(C,0)), show=True)
+# p = np.abs(np.sum(C,0)/np.sum(C))
+# print -np.sum(p * np.log(p+1e-08))
