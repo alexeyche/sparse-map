@@ -84,6 +84,15 @@ def white_ts(x, filter_len, fudge=1e-12):
    return filter_ts(x, W), W
 
 
+from scipy.stats import norm
+
+def brownian_motion(t, delta=0.25, dt=0.1, x=0.0):
+   res = np.zeros(t)
+   for ki, k in enumerate(xrange(t)):
+      x = x + norm.rvs(scale=delta**2*dt)
+      res[ki] = x
+   return res
+
 if __name__ == '__main__':
    np.random.seed(10)
 

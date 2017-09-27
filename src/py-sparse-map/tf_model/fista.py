@@ -77,6 +77,7 @@ z_v = h_v.copy()
 x_v = np.zeros((seq_size, batch_size, input_size))
 for bi in xrange(batch_size):
     for ni in xrange(input_size):
+        # x_v[:,bi,ni] = np.random.randn(seq_size)
         x_v[:,bi,ni] = generate_ts(seq_size)
 
 x_v = x_v.transpose((1, 0, 2)).reshape((batch_size, seq_size, input_size, 1))

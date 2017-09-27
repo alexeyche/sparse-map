@@ -7,16 +7,16 @@ from util import *
 from tf_model.ts_pp import generate_ts
 
 
-np.random.seed(3)
-tf.set_random_seed(3)
+np.random.seed(4)
+tf.set_random_seed(4)
 
 
 batch_size = 1
 input_size = 1
-seq_size = 400
+seq_size = 2000
 filter_len = 50
 layer_size = 100
-alpha = 1.0
+alpha = 0.1
 step = 1.0
 
 # shrink = lambda a, b: tf.nn.relu(tf.abs(a) - b) * tf.sign(a)
@@ -29,7 +29,7 @@ x = tf.placeholder(tf.float32, shape=(batch_size, seq_size, 1, input_size), name
 
 t = tf.placeholder(tf.float32, shape=(), name="t")
 
-D_init = np.random.randn(filter_len, input_size, layer_size)*10.0
+D_init = np.random.randn(filter_len, input_size, layer_size)
 # D_init = generate_dct_dictionary(filter_len, layer_size).reshape((filter_len, input_size, layer_size))*0.1
 
 D = tf.Variable(D_init.reshape((filter_len, 1, input_size, layer_size)), dtype=tf.float32)
@@ -90,7 +90,11 @@ h_v = np.zeros(h.get_shape().as_list())
 x_v = np.zeros((seq_size, batch_size, input_size))
 for bi in xrange(batch_size):
     for ni in xrange(input_size):
-        x_v[:,bi,ni] = generate_ts(seq_size)
+        x_v[:,bi,ni] = np.diff(generate_ts(seq_size+1))
+        x_v[:,bi,ni] /= np.std(x_v[:,bi,ni])
+        # x_v[:,bi,ni] = generate_ts(seq_size)
+
+        # x_v[:,bi,ni] = np.random.randn(seq_size)
 
 x_v = x_v.transpose((1, 0, 2)).reshape((batch_size, seq_size, input_size, 1))
 
@@ -108,9 +112,10 @@ x_v = x_v.transpose((1, 0, 2)).reshape((batch_size, seq_size, input_size, 1))
 
 e_m_arr, l_m_arr = [], []
 
-tol = 1e-04
+lookback, tol = 10, 1e-04
+# tol = 0.0
 try:
-	for e in xrange(100):
+	for e in xrange(1000):
 
 		x_hat_v, h_v, L_v, h_grad_v, se_v, D_v, error_v, fb_v, exc_v = sess.run(
 			[
@@ -134,7 +139,7 @@ try:
 		e_m_arr.append(e_m)
 		l_m_arr.append(l_m)
 
-		if e>10 and np.std(e_m_arr[-10:]) < tol and np.std(l_m_arr[-10:]) < tol:
+		if e>lookback and np.std(e_m_arr[-lookback:]) < tol and np.std(l_m_arr[-lookback:]) < tol:
 			print "Converged"
 			break
 		
@@ -142,7 +147,7 @@ try:
 except KeyboardInterrupt:
 	pass
 
-shl(exc_v-fb_v)
+# shl(exc_v-fb_v)
 # shl(np.asarray(e_m_arr), show=False)
 # shl(h_v, show=False)
 # shl(x_v, x_hat_v, show=False)
