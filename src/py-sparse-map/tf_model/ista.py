@@ -13,10 +13,10 @@ tf.set_random_seed(3)
 
 batch_size = 1
 input_size = 1
-seq_size = 200
+seq_size = 400
 filter_len = 50
 layer_size = 100
-alpha = 0.5
+alpha = 1.0
 step = 1.0
 
 # shrink = lambda a, b: tf.nn.relu(tf.abs(a) - b) * tf.sign(a)
@@ -29,7 +29,7 @@ x = tf.placeholder(tf.float32, shape=(batch_size, seq_size, 1, input_size), name
 
 t = tf.placeholder(tf.float32, shape=(), name="t")
 
-D_init = np.random.randn(filter_len, input_size, layer_size)*1.0
+D_init = np.random.randn(filter_len, input_size, layer_size)*4.0
 # D_init = generate_dct_dictionary(filter_len, layer_size).reshape((filter_len, input_size, layer_size))*0.1
 
 D = tf.Variable(D_init.reshape((filter_len, 1, input_size, layer_size)), dtype=tf.float32)
@@ -93,7 +93,7 @@ e_m_arr, l_m_arr = [], []
 
 tol = 1e-04
 try:
-	for e in xrange(100):
+	for e in xrange(2000):
 
 		x_hat_v, h_v, L_v, h_grad_v, se_v, D_v = sess.run(
 			[
