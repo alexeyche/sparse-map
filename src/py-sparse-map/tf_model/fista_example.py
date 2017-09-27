@@ -49,12 +49,14 @@ def fista(A, b, l, maxit):
     L = linalg.norm(A) ** 2
     time0 = time.time()
     for _ in xrange(maxit):
-        xold = x.copy()
-        z = z + A.T.dot(b - A.dot(z)) / L
-        x = soft_thresh(z, l / L)
-        t0 = t
-        t = (1. + sqrt(1. + 4. * t ** 2)) / 2.
-        z = x + ((t0 - 1.) / t) * (x - xold)
+        new_x = soft_thresh(z + A.T.dot(b - A.dot(z)) / L, l / L)
+        new_t = (1. + sqrt(1. + 4. * t ** 2)) / 2.
+        new_z = new_x + ((t - 1.) / new_t) * (new_x - x)
+
+        t = new_t
+        x = new_x.copy()
+        z = new_z.copy()
+
         this_pobj = 0.5 * linalg.norm(A.dot(x) - b) ** 2 + l * linalg.norm(x, 1)
         pobj.append((time.time() - time0, this_pobj))
 
@@ -62,7 +64,7 @@ def fista(A, b, l, maxit):
     return x, pobj, times
 
 
-maxit = 3000
+maxit = 1000
 x_ista, pobj_ista, times_ista = ista(A, b, l, maxit)
 
 x_fista, pobj_fista, times_fista = fista(A, b, l, maxit)
