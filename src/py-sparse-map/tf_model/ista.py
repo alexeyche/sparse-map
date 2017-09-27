@@ -7,8 +7,8 @@ from util import *
 from tf_model.ts_pp import generate_ts
 
 
-np.random.seed(4)
-tf.set_random_seed(4)
+np.random.seed(5)
+tf.set_random_seed(5)
 
 
 batch_size = 1
@@ -30,7 +30,7 @@ x = tf.placeholder(tf.float32, shape=(batch_size, seq_size, 1, input_size), name
 t = tf.placeholder(tf.float32, shape=(), name="t")
 
 D_init = np.random.randn(filter_len, input_size, layer_size)
-# D_init = generate_dct_dictionary(filter_len, layer_size).reshape((filter_len, input_size, layer_size))*0.1
+# D_init = generate_dct_dictionary(filter_len, layer_size).reshape((filter_len, input_size, layer_size))
 
 D = tf.Variable(D_init.reshape((filter_len, 1, input_size, layer_size)), dtype=tf.float32)
 

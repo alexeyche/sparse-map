@@ -13,10 +13,10 @@ tf.set_random_seed(3)
 
 batch_size = 1
 input_size = 1
-seq_size = 200
+seq_size = 2000
 filter_len = 50
 layer_size = 100
-alpha = 0.1
+alpha = 0.05
 step = 1.0
 
 # shrink = lambda a, b: tf.nn.relu(tf.abs(a) - b) * tf.sign(a)
@@ -29,7 +29,7 @@ x = tf.placeholder(tf.float32, shape=(batch_size, seq_size, 1, input_size), name
 
 t = tf.placeholder(tf.float32, shape=(), name="t")
 
-D_init = np.random.randn(filter_len, input_size, layer_size)*1.0
+D_init = np.random.randn(filter_len, input_size, layer_size)
 # D_init = generate_dct_dictionary(filter_len, layer_size).reshape((filter_len, input_size, layer_size))*0.1
 
 D = tf.Variable(D_init.reshape((filter_len, 1, input_size, layer_size)), dtype=tf.float32)
@@ -78,7 +78,10 @@ x_v = np.zeros((seq_size, batch_size, input_size))
 for bi in xrange(batch_size):
     for ni in xrange(input_size):
         # x_v[:,bi,ni] = np.random.randn(seq_size)
-        x_v[:,bi,ni] = generate_ts(seq_size)
+        # x_v[:,bi,ni] = generate_ts(seq_size)
+        x_v[:,bi,ni] = np.diff(generate_ts(seq_size+1))
+        x_v[:,bi,ni] /= np.std(x_v[:,bi,ni])
+
 
 x_v = x_v.transpose((1, 0, 2)).reshape((batch_size, seq_size, input_size, 1))
 
@@ -96,7 +99,8 @@ x_v = x_v.transpose((1, 0, 2)).reshape((batch_size, seq_size, input_size, 1))
 
 t_v, e_m_arr, l_m_arr = 1.0, [], []
 
-tol = 1e-04
+lookback, tol = 10, 1e-04
+
 try:
 	for e in xrange(1000):
 
@@ -123,7 +127,7 @@ try:
 		e_m_arr.append(e_m)
 		l_m_arr.append(l_m)
 
-		if e>10 and np.std(e_m_arr[-10:]) < tol and np.std(l_m_arr[-10:]) < tol:
+		if e>lookback and np.std(e_m_arr[-lookback:]) < tol and np.std(l_m_arr[-lookback:]) < tol:
 			print "Converged"
 			break
 		
