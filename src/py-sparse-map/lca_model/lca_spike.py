@@ -8,7 +8,7 @@ from util import *
 
 from tf_model.hist_rnn import rnn_with_hist_loop_fn
 from tf_model.env import Env
-from tf_model.ts_pp import white_ts, generate_ts
+from ts_pp import white_ts, generate_ts
 from tf_model.model import LCACell, normalize_weights, exp_poisson, poisson, LCAScalarCell
 
 from config import Config

@@ -1,7 +1,7 @@
 
 import tensorflow as tf
 import numpy as np
-from tf_model.ts_pp import generate_ts
+from ts_pp import generate_ts
 
 from util import *
 

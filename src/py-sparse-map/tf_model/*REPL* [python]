@@ -1,9 +1,0 @@
-Python 2.7.13 (default, Dec 18 2016, 07:03:39) 
-[GCC 4.2.1 Compatible Apple LLVM 8.0.0 (clang-800.0.42.1)] on darwin
-Type "help", "copyright", "credits" or "license" for more information.
->>> 289.631763958
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-  File "<string>", line 66, in <module>
-Exception
->>> 
