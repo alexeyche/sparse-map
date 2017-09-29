@@ -7,11 +7,24 @@ from util import *
 
 from fista_model.model import Model
 
+seed = 5
+tf.set_random_seed(seed)
+np.random.seed(seed)
+
+def make_random_noise(x):
+	noise = np.random.random(x.shape)
+	noise[noise < 0.999] = 0
+	noise[noise >= 0.999] = 10.0
+	return x + noise
+
 sess = tf.Session()
 
 seq_size = 1000
 batch_size = 1
 input_size, filter_len, layer_size = 1, 50, 100
+
+
+
 
 D = np.random.randn(filter_len, 1, input_size, layer_size).astype(np.float32)
 

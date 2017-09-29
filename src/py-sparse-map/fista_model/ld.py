@@ -5,7 +5,6 @@ import numpy as np
 from util import *
 
 from ts_pp import generate_ts
-from tf_model.window_function import map_over_seq
 
 np.random.seed(5)
 tf.set_random_seed(5)
