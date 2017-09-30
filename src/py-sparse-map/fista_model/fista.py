@@ -102,7 +102,7 @@ t_v, e_m_arr, l_m_arr = 1.0, [], []
 lookback, tol = 10, 1e-04
 
 try:
-	for e in xrange(1000):
+	for e in xrange(50):
 
 		x_hat_v, h_v, z_v, t_v, L_v, z_grad_v, se_v, D_v = sess.run(
 			[

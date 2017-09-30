@@ -57,6 +57,8 @@ def shs(*args, **kwargs):
     labels = kwargs.get("labels", [])
     make_pca = kwargs.get("make_pca", True)
 
+    plt.figure()
+    
     for id, a in enumerate(args):
         if make_pca and a.shape[1] > 2:
             import sklearn.decomposition as dec
