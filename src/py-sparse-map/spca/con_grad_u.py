@@ -17,16 +17,14 @@ def l0_nonlin(v, t, p):
 
 data = load_iris()
 x_v = data.data
-eigvec = np.linalg.eig(np.cov(x_v.T))[1]
+C = np.cov(x_v.T)
+eigval, eigvec = np.linalg.eig(C)
 PC = np.dot(x_v, eigvec)[:,0:2]
 
 np.random.seed(10)
 tf.set_random_seed(10)
 
 batch_size, input_size = x_v.shape
-dim_size = 2
-p = 0.25 
-# p = 0.1 # for exp nonlin
 
 A = tf.placeholder(tf.float32, shape=(input_size, input_size), name="A")
 r = tf.Variable(np.random.randn(input_size), dtype=tf.float32)
@@ -35,8 +33,8 @@ new_r = tf.matmul(tf.expand_dims(r, 0), A)
 
 new_r = tf.squeeze(new_r)
 
-# new_r = exp_nonlin(r, new_r, p)
-new_r = l0_nonlin(r, new_r, p)
+# new_r = exp_nonlin(r, new_r, 0.1)
+# new_r = l0_nonlin(r, new_r, 0.25)  # 1/4
 
 new_r = tf.nn.l2_normalize(new_r, 0)
 new_r = tf.assign(r, new_r)
@@ -48,11 +46,9 @@ sess.run(tf.global_variables_initializer())
 def find_pc(pi, epochs, x_v):
 	sess.run(tf.global_variables_initializer())
 
-	Av = np.cov(x_v.T)
-
 	for e in xrange(epochs):
-		rv = sess.run(new_r, {A: Av})
-		if e % 1 == 0:
+		rv = sess.run(new_r, {A: np.cov(x_v.T)})
+		if e % 5 == 0:
 			print "Epoch {}, {}".format(e, np.sum(np.abs(rv) - np.abs(eigvec[:,pi])))
 	return rv
 
@@ -60,6 +56,9 @@ def find_pc(pi, epochs, x_v):
 
 pc0 = find_pc(0, 20, x_v)
 pc1 = find_pc(1, 20, x_v - np.outer(pc0, np.dot(x_v, pc0)).T)
+
+ev0 = np.inner(np.dot(pc0, C.T), pc0)
+ev1 = np.inner(np.dot(pc1, C.T), pc1)
 
 PC_est = np.dot(x_v, np.asarray([pc0, pc1]).T)
 
