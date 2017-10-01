@@ -1,7 +1,7 @@
 import numpy as np
 import sklearn.datasets, sklearn.decomposition
 from util import *
-from rpca.util import *
+from rpca.rpca_util import *
 
 def reconstruct_pca(x, ncomp):
     M = np.mean(x, axis=0)

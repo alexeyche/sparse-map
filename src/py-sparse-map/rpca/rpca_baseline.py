@@ -5,7 +5,7 @@ from sklearn.datasets import load_iris
 import tensorflow as tf
 import numpy as np
 from ts_pp import generate_ts
-from rpca.util import shrink, singular_shrink, generate_toy_data
+from rpca.rpca_util import shrink, singular_shrink, generate_toy_data
 
 
 
