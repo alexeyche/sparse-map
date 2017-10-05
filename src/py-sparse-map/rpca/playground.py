@@ -2,6 +2,7 @@ import numpy as np
 import sklearn.datasets, sklearn.decomposition
 from util import *
 from rpca.rpca_util import *
+from rpca.sparse_pca import find_components
 
 def reconstruct_pca(x, ncomp):
     M = np.mean(x, axis=0)
@@ -11,7 +12,21 @@ def reconstruct_pca(x, ncomp):
 
     L = M + np.dot(PC[:,:ncomp], eigvec[:, :ncomp].T)
 
-    return L, PC, eigval, eigvec
+    return L, PC, eigvec
+
+
+
+def reconstruct_spca(x, ncomp):
+    M = np.mean(x, axis=0)
+    C = np.cov(x.T)
+    
+    eigvec = find_components(ncomp, x, 0.25, 100).T
+    
+    PC = np.dot(x - M, eigvec)
+
+    L = M + np.dot(PC[:,:ncomp], eigvec[:, :ncomp].T)
+
+    return L, PC, eigvec
 
 
 np.random.seed(17)
@@ -44,10 +59,11 @@ Y = np.zeros((batch_size, input_size))
 # L, PC, eigval, eigvec = reconstruct_pca(X, ncomp)
 
 
-for it in xrange(100):
-    # L = singular_shrink(X - S + (1.0/mu)*Y, tau=1.0/mu)
+for it in xrange(200):
+    L = singular_shrink(X - S + (1.0/mu)*Y, tau=1.0/mu)
 
-    L, PC, eigval, eigvec = reconstruct_pca(X - S + (1.0/mu)*Y, ncomp)
+    # L, PC, eigvec = reconstruct_spca(X - S + (1.0/mu)*Y, ncomp)
+    # L, PC, eigvec = reconstruct_pca(X - S + (1.0/mu)*Y, ncomp)
     S = shrink(X - L + (1.0/mu)*Y, tau=lam/mu)
 
     Z = X - L - S
