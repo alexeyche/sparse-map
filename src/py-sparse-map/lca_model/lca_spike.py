@@ -6,10 +6,10 @@ from functools import partial
 import time
 from util import *
 
-from tf_model.hist_rnn import rnn_with_hist_loop_fn
-from tf_model.env import Env
+from lca_model.hist_rnn import rnn_with_hist_loop_fn
+from env import Env
 from ts_pp import white_ts, generate_ts
-from tf_model.model import LCACell, normalize_weights, exp_poisson, poisson, LCAScalarCell
+from lca_model.model import LCACell, normalize_weights, exp_poisson, poisson, LCAScalarCell
 
 from config import Config
 
@@ -25,7 +25,7 @@ from util import *
 lrate = 0.01
 # lrate *= 100.0
 
-epochs = 500
+epochs = 1
 
 seed = 5
 tf.set_random_seed(seed)

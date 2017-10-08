@@ -6,11 +6,11 @@ from functools import partial
 import time
 from util import *
 
-from hist_rnn import rnn_with_hist_loop_fn
+from lca_model.hist_rnn import rnn_with_hist_loop_fn
 from config import Config
-from env import Env
+# from env import Env
 
-from model import LCACell, normalize_weights, exp_poisson
+from lca_model.model import LCACell, normalize_weights, exp_poisson
 from tensorflow.contrib.rnn import MultiRNNCell
 
 import scikits.statsmodels.tsa.api as smt
@@ -168,19 +168,19 @@ apply_grads_step = tf.group(
 sess = tf.Session()
 saver = tf.train.Saver()
 
-env = Env("lca_poc")
+# env = Env("lca_poc")
 
 
-model_fname = env.run("model.ckpt")
-if os.path.exists(model_fname):
-    print "Restoring from {}".format(model_fname)
-    saver.restore(sess, model_fname)
-    epochs = 0
-else:
-    sess.run(tf.global_variables_initializer())
+# model_fname = env.run("model.ckpt")
+# if os.path.exists(model_fname):
+#     print "Restoring from {}".format(model_fname)
+#     saver.restore(sess, model_fname)
+#     epochs = 0
+# else:
+#     sess.run(tf.global_variables_initializer())
 
-
-env.clear_pics(env.run())
+sess.run(tf.global_variables_initializer())
+# env.clear_pics(env.run())
 
 x_v = np.zeros((seq_size, batch_size, input_size))
 

@@ -57,7 +57,7 @@ def rnn_with_hist_loop_fn(inputs, sequence_length, initial_state, window):
             for input_id, next_input in enumerate(next_inputs)
         )
         
-        print next_inputs
+        print "ni", next_inputs
         
         next_loop_state = next_inputs
         

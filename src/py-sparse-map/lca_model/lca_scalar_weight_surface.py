@@ -6,11 +6,11 @@ from functools import partial
 import time
 from util import *
 
-from hist_rnn import rnn_with_hist_loop_fn
+from lca_model.hist_rnn import rnn_with_hist_loop_fn
 from config import Config
 from env import Env
 
-from model import LCACell, normalize_weights, exp_poisson, poisson, LCAScalarCell
+from lca_model.model import LCACell, normalize_weights, exp_poisson, poisson, LCAScalarCell
 from tensorflow.contrib.rnn import MultiRNNCell
 
 import scikits.statsmodels.tsa.api as smt
@@ -66,6 +66,7 @@ state = tuple(
         tf.placeholder(tf.float32, [batch_size, cell.layer_size], name="a_m"),
         tf.placeholder(tf.float32, [batch_size, cell.layer_size], name="fb_m"),
         tf.placeholder(tf.float32, [batch_size, cell.input_size, cell.layer_size], name="dF"),
+        tf.placeholder(tf.float32, [batch_size, cell.layer_size, cell.layer_size], name="dFc"),
     )) for cell in net._cells
 )
 

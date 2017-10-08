@@ -164,7 +164,7 @@ class LCAScalarCell(RNNCell):
 
 
     def _init_parameters(self):
-        if self._Finput is not None: return (self._Finput, )
+        if self._Finput is not None: return (self._Finput, tf.matmul(tf.transpose(self._Finput, self._Finput)))
         
         c = self._c
         return (
@@ -190,7 +190,6 @@ class LCAScalarCell(RNNCell):
             
             u, a, a_m, fb_m, dF, dFc = state
             F = self._params[0]
-            
             Fc = self._params[1]
             # Fc = tf.matmul(tf.transpose(F), F) - tf.eye(self._layer_size)
             # Fc = tf.matrix_set_diag(Fc, tf.zeros(self._layer_size))
