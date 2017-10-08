@@ -4,8 +4,12 @@ import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
 import time
 from matplotlib import pyplot as plt
+import platform
+from sklearn.datasets import make_classification
 
 slice_by_target = lambda x, target: [x[np.where(target == t)] for t in np.unique(target)]
+
+
 
 def get_cmap(n, name='hsv'):
     '''Returns a function that maps each index in 0, 1, ..., n-1 to a distinct
@@ -38,57 +42,79 @@ class PCLayer(object):
 		# dW = tf.matmul(tf.transpose(self.err), self.a)
 		dW, db = tf.gradients(self.mse, [self.W, self.b])
 		return [(dW, self.W), (db, self.b)]
+		# return [(dW, self.W)]
 		
 
-# mnist = input_data.read_data_sets(
-# 	"/Users/aleksei/tmp/MNIST_data/", 
-# 	one_hot=False
-# )
+mnist = input_data.read_data_sets(
+	"/home/alexeyche/tmp"
+	if platform.system() == "Linux" else 
+	"/Users/aleksei/tmp/MNIST_data/",
+	one_hot=False
+)
 
-mnist = None
-data = load_iris()
-
-y_v = data.target
-x_v = data.data
-
-num_batches = 1
 
 np.random.seed(10)
 tf.set_random_seed(10)
 
+
+## iris
+
+mnist = None
+
+# data = load_iris()
+# y_v = data.target
+# x_v = data.data
+
+x_v, y_v = make_classification(
+    n_samples=2000,
+    n_features=10,
+    n_informative=2,
+    n_redundant=4,
+    n_repeated=0,
+    n_clusters_per_class=2,
+    n_classes=2,
+    random_state=10
+)
+
+
+
+num_batches = 1
+
 batch_size = x_v.shape[0]
 input_size = x_v.shape[1]
 
-# batch_size = 1000
+
+# batch_size = 500
 # input_size = mnist.train.images.shape[1]
 
 local_rule = True
-net_structure = [2]
-lrates = [0.1]
-# lrates = [1.0, 1.0] #, 1e-02]
-# lrates = [1.0] * len(net_structure)
-# lrates = [1.0, 1e-02, 1e-03, 1e-03]
-# lrates = [1.0, 1.0]
+net_structure = [500, 250, 2]
+lrates = [1.0] * len(net_structure)
+# lrates = [1.0, 0.1, 0.001]
 
-act = tf.identity
+# act = tf.identity
 # act = tf.nn.relu
+# act = tf.nn.elu
 # act = tf.nn.tanh
 # act = tf.nn.sigmoid
+act = lambda x: tf.sign(x) * tf.nn.relu(tf.abs(x))
 
 x = tf.placeholder(tf.float32, shape=(batch_size, input_size), name="x")
 
 net, inp = [], x
 for layer_size in net_structure:
 	net.append(
-		PCLayer(inp, layer_size, act, weight_sd=0.1)
+		PCLayer(inp, layer_size, act, weight_sd=0.5)
 	)
 	inp = net[-1].a
 
 
 if local_rule:
-	o = tf.train.AdamOptimizer(1e-02)
-	# o = tf.train.AdadeltaOptimizer(1e-02)
+	o = tf.train.AdamOptimizer(1e-03)
+	# o = tf.train.AdadeltaOptimizer(1e-01)
 	# o = tf.train.GradientDescentOptimizer(1e-06)
+	# o = tf.train.AdagradOptimizer(1e-02)
+	# o = tf.train.RMSPropOptimizer(1e-03)
 
 	mse = [l.mse for l in net]
 
@@ -102,8 +128,8 @@ if local_rule:
 		])
 	)
 else:
-	# o = tf.train.AdamOptimizer(1e-02)
-	o = tf.train.AdadeltaOptimizer(1e-01)
+	o = tf.train.AdamOptimizer(1e-04)
+	# o = tf.train.AdadeltaOptimizer(1e-01)
 
 	rev_input = net[-1].a
 	for l in reversed(net):
@@ -121,7 +147,7 @@ if not mnist is None:
 	num_batches = mnist.train.num_examples/batch_size
 
 try:
-	for e in xrange(1000):
+	for e in xrange(500):
 		
 		start_time = time.time()
 		mse_v = np.zeros(len(mse))
@@ -152,17 +178,19 @@ try:
 except KeyboardInterrupt:
 	pass
 
-# C = np.cov(mnist.train.images.T)
-# eigval, eigvec = np.linalg.eig(C)
-# PC = np.dot(mnist.train.images, eigvec)[:,0:2]
+def get_pc(x_v):
+	C = np.cov(x_v.T)
+	eigval, eigvec = np.linalg.eig(C)
+	return np.dot(x_v, eigvec)
 
-cmap = get_cmap(len(np.unique(y_v)))
+
+PC = get_pc(x_v)
+
+cmap = get_cmap(len(np.unique(y_v))+1)
+
 if not mnist is None:
 	pic_size = np.sqrt(x_v.shape[1]).astype(np.int32)
 	ix_v = x_v.reshape((x_v.shape[0], pic_size, pic_size))
 
-# shs(*slice_by_target(PC, y_v), labels=[cmap(v) for v in y_v], show=False)
-# shs(*slice_by_target(a_v[-1], y_v), labels=[cmap(v) for v in y_v], show=True)
-
-a = slice_by_target(a_v[-1], y_v)[0]
-plt.scatter(a[:,0], a[:,1], c=)
+shs(*slice_by_target(PC[:, :2], y_v), labels=[cmap(v) for v in np.unique(y_v)], show=False)
+shs(*slice_by_target(a_v[-1], y_v), labels=[cmap(v) for v in np.unique(y_v)], show=True)
