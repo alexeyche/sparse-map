@@ -66,7 +66,7 @@ def shs(*args, **kwargs):
             a = pca.fit(a).transform(a)
         
         if len(labels) > 0:
-            plt.scatter(a[:,0], a[:,1], c=labels[id], cmap=pylab.cm.gist_rainbow)
+            plt.scatter(a[:,0], a[:,1], c=labels[id]) #, cmap=pylab.cm.gist_rainbow)
         else:
             plt.scatter(a[:,0], a[:,1])
     
