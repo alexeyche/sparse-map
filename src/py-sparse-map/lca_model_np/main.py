@@ -9,6 +9,9 @@ from ts_pp import white_ts, generate_ts
 def relu(x):
     return np.maximum(x, 0.0)
 
+def normf(F, axis=0):
+    return F/np.linalg.norm(F, axis=axis)
+
 epochs = 10
 
 np.random.seed(5)
@@ -27,10 +30,10 @@ c.tau = 5.0
 c.grad_accum_rate = 1.0
 
 c.lam = 0.0003
-c.adaptive_threshold = False
+c.adaptive_threshold = True
 
-c.tau_m = 50.0
-c.adapt = 5.0
+c.tau_m = 100.0
+c.adapt = 1.0
 c.act_factor = 1.0
 c.adaptive = False
 
@@ -38,7 +41,7 @@ c.tau_fb = 10.0
 c.fb_factor = 2.0
 c.smooth_feedback = False
 
-c.lrate = 0.1
+c.lrate = 0.5 * 50.0
 
 
 act = relu
@@ -53,17 +56,18 @@ for bi in xrange(batch_size):
 x_hat = np.zeros((seq_size, batch_size, input_size))
 
 F = np.random.randn(filter_len * input_size, layer_size)
-F = F/np.linalg.norm(F, axis=0)
+F = normf(F)
 F_init = F.copy()
 
-Fc = np.dot(F.T, F)
+Fc = np.dot(F.T, F) - np.eye(layer_size)
 Fc_init = Fc.copy()
 
+a_m = np.zeros((batch_size, layer_size))
+        
 try:
     for e in xrange(100):    
         u = np.zeros((batch_size, layer_size))
         a = np.zeros((batch_size, layer_size))
-        a_m = np.zeros((batch_size, layer_size))
         dF = np.zeros(F.shape)
         dFc = np.zeros(Fc.shape)
 
@@ -72,7 +76,7 @@ try:
         a_m_seq = np.zeros((seq_size, batch_size, layer_size))
 
         x_win = np.zeros((filter_len, batch_size, input_size))
-
+        err_acc = 0.0
         for ti in xrange(seq_size):
             left_ti = max(0, ti-filter_len)
 
@@ -96,13 +100,15 @@ try:
 
             x_hat_flat_t = np.dot(a, F.T)
             
-            error_part = x_hat_flat_t - x_flat
-
+            error_part = x_flat - x_hat_flat_t
+            
+            err_acc += np.linalg.norm(error_part, 2)/seq_size
+            
             dF += np.dot(error_part.T, a)
-            dFc += - np.dot(a.T, a)
+            dFc += np.dot(a.T, a)
 
             x_hat_t = x_hat_flat_t.reshape((batch_size, filter_len, input_size))
-            x_hat[left_ti:ti] += np.transpose(x_hat_t[:, :(ti-left_ti), :], (1, 0, 2))/20.0
+            x_hat[left_ti:ti] += np.transpose(x_hat_t[:, :(ti-left_ti), :], (1, 0, 2))/(filter_len * layer_size * c.tau)
 
 
             a_seq[ti] = a
@@ -111,17 +117,26 @@ try:
 
         error_profile = np.mean(np.square(x_hat-x), 2)
         error = np.mean(error_profile)
+        
+        if np.linalg.norm(dF) > 1000.0:
+            raise Exception(str(np.linalg.norm(dFc)))
 
         F += c.lrate * dF
         Fc += c.lrate * dFc
         
-        print "Epoch {}, MSE {:}".format(
+        F = normf(F)
+        Fc = normf(Fc)
+        # Fc = np.dot(F.T, F)
+
+        print "Epoch {}, err_acc {}, MSE {:}".format(
             e, 
+            err_acc,
             error
         )
 except KeyboardInterrupt:
     pass
 
-
-shl(x, x_hat, show=False)
-shm(F-F_init)
+shm(a_seq, show=False)
+shl(a_m_seq)
+# shl(x, x_hat, show=False)
+# shm(F-F_init)
