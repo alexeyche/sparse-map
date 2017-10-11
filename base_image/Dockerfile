@@ -13,6 +13,8 @@ RUN cd eigen; cmake ./eigen*; make install
 
 RUN apt-get install -y git
 RUN git clone https://github.com/jbeder/yaml-cpp
+RUN apt-get install -y libboost-all-dev
+RUN cd yaml-cpp; git checkout yaml-cpp-0.5.3
 RUN cd yaml-cpp; cmake -DBUILD_SHARED_LIBS=ON .; make -j install
 
 ENV LD_LIBRARY_PATH "/usr/local/lib"
