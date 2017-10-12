@@ -19,6 +19,15 @@ def integrate_euler(dXdt, X0, Tvec, dt):
 		Xseq[ti] = X.copy()
 	return Xseq
 
+def integrate_newx(newx, X0, Tvec, dt):
+	X = X0.copy()
+	Xseq = np.zeros((len(Tvec), len(X)))
+	for ti, t in enumerate(Tvec):
+		X = newx(X, t)
+		Xseq[ti] = X.copy()
+	return Xseq
+
+
 batch_size = 1
 layer_size = 2
 filter_len = 1
@@ -40,7 +49,7 @@ input_signal = lambda t: np.sin(2.0 * np.pi * freq * t - shift)
 
 # parameters
 
-gain = np.asarray([10.0, 0.0001])
+gain = np.asarray([5.0, 0.01])
 threshold = 0.01
 feedback_gain = np.dot(gain.T, gain) - np.eye(layer_size)
 tau = 5.0
@@ -52,8 +61,25 @@ f = lambda x: relu(x - threshold)
 def dXdt(X, t=0):
 	return (- X + gain * input_signal(t) - np.dot(f(X), feedback_gain))/tau
 
+
+def dXdt_ode(t, X):
+	print X
+	return (- X + gain * input_signal(t) - np.dot(f(X), feedback_gain))/tau
+
+
 X0 = np.zeros((layer_size,))
 
-X, infodict = integrate.odeint(dXdt, X0, Tvec, full_output=True)
-X_euler = integrate_euler(dXdt, X0, Tvec, dt)
+# X, infodict = integrate.odeint(dXdt, X0, Tvec, full_output=True)
+# X_euler = integrate_euler(dXdt, X0, Tvec, dt)
 
+
+Xseq = list()
+
+r = integrate.ode(dXdt_ode).set_integrator("dopri5", method="bdf")
+r.set_initial_value(X0)
+
+while r.successful() and r.t < Tmax:
+	
+	Xseq.append(r.integrate(r.t + dt))
+
+Xseq = np.asarray(Xseq)

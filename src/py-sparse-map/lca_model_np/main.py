@@ -18,12 +18,41 @@ def norm(w):
     return np.asarray([w[:,i]/np.sqrt(np.sum(np.square(w[:,i]))) for i in xrange(w.shape[1])]).T
 
 
+class LCALayer(object):
+    def __init__(self, seq_size, batch_size, input_size, filter_len):
+
+        self.F = 1.0 * (np.random.uniform(size=(filter_len * input_size, layer_size)) - 0.5)
+        self.F = normf(self.F)
+        self.F_init = self.F.copy()
+
+        self.Fc = np.dot(self.F.T, self.F) - np.eye(self.layer_size)
+        self.Fc_init = self.Fc.copy()
+
+
+        self.x_hat = np.zeros((seq_size, batch_size, input_size))
+
+        self.u = np.zeros((batch_size, layer_size))
+        self.a = np.zeros((batch_size, layer_size))
+        self.dF = np.zeros(self.F.shape)
+        self.dFc = np.zeros(self.Fc.shape)
+
+        self.a_seq = np.zeros((seq_size, batch_size, layer_size))
+        self.u_seq = np.zeros((seq_size, batch_size, layer_size))
+        self.a_m_seq = np.zeros((seq_size, batch_size, layer_size))
+
+        self.x_win = np.zeros((batch_size, filter_len, input_size))
+        self.err_acc = 0.0
+
+
+
+
+
 epochs = 10
 
 np.random.seed(5)
 
 input_size = 1
-seq_size = 250
+seq_size = 1000
 batch_size = 1
 layer_size = 50
 filter_len = 25
@@ -36,10 +65,10 @@ c.tau = 5.0
 c.grad_accum_rate = 1.0
 
 # c.lam = 1.0
-c.lam = 0.02
-c.adaptive_threshold = False
+c.lam = 0.01
+c.adaptive_threshold = True
 
-c.tau_m = 100.0
+c.tau_m = 1000.0
 c.adapt = 1.0
 c.act_factor = 1.0
 c.adaptive = False
@@ -62,8 +91,6 @@ for bi in xrange(batch_size):
 
 # x[:,0,0] = 1.0*np.sin(np.linspace(0, 250, seq_size)/10.0)
 
-
-
 F = 1.0 * (np.random.uniform(size=(filter_len * input_size, layer_size)) - 0.5)
 F = normf(F)
 F_init = F.copy()
@@ -71,15 +98,20 @@ F_init = F.copy()
 Fc = np.dot(F.T, F) - np.eye(layer_size)
 Fc_init = Fc.copy()
 
-a_m = np.zeros((batch_size, layer_size))
+
+
 
 # opt = AdamOpt((0.01, 0.01), beta1=0.9, beta2=0.999, eps=1e-05)
-opt = NesterovMomentumOpt((0.5, 0.5), 0.99)
-# opt = SGDOpt((20.5, 20.5))
+# opt = NesterovMomentumOpt((0.1, 0.1), 0.99)
+# opt = SGDOpt((5.0, 5.0))
+opt = SGDOpt((1.0, 1.0))
 opt.init(F, Fc)
 
+a_m = np.zeros((batch_size, layer_size))
+a_hist = []
 try:
-    for e in xrange(300):
+    for e in xrange(500):
+
         x_hat = np.zeros((seq_size, batch_size, input_size))
 
         u = np.zeros((batch_size, layer_size))
@@ -90,11 +122,13 @@ try:
         a_seq = np.zeros((seq_size, batch_size, layer_size))
         u_seq = np.zeros((seq_size, batch_size, layer_size))
         a_m_seq = np.zeros((seq_size, batch_size, layer_size))
-        gain_seq = np.zeros((seq_size, batch_size, layer_size))
-        feed_seq = np.zeros((seq_size, batch_size, layer_size))
 
         x_win = np.zeros((batch_size, filter_len, input_size))
         err_acc = 0.0
+
+        prev_u = np.zeros((2, batch_size, layer_size))
+        
+
         for ti in xrange(seq_size):
             left_ti = max(0, ti-filter_len)
 
@@ -107,11 +141,9 @@ try:
             else:
                 threshold = c.lam
 
-            gain = np.dot(x_flat, F)
-            feed = np.dot(a, Fc) 
+            new_du = (- u + np.dot(x_flat, F) - np.dot(a, Fc))/ c.tau
 
-            du = - u + gain - feed
-            u += c.epsilon * du / c.tau
+            u += c.epsilon * new_du
 
             a[:] = act(u - threshold)
 
@@ -122,10 +154,10 @@ try:
             
             error_part = x_flat - x_hat_flat_t
             
-            err_acc += np.linalg.norm(error_part)/seq_size
+            err_acc += np.linalg.norm(error_part)
             
-            dF += (1.0/seq_size) * np.dot(error_part.T, a)
-            dFc += (1.0/seq_size) * np.dot(a.T, a)
+            dF += np.dot(error_part.T, a)
+            dFc += np.dot(a.T, a)
 
             x_hat_t = x_hat_flat_t.reshape((batch_size, filter_len, input_size))
             x_hat[left_ti:ti] += np.transpose(x_hat_t[:, :(ti-left_ti), :], (1, 0, 2))/filter_len
@@ -133,11 +165,9 @@ try:
             a_seq[ti] = a
             u_seq[ti] = u
             a_m_seq[ti] = a_m
-            gain_seq[ti] = gain
-            feed_seq[ti] = feed
 
-        error_profile = np.mean(np.square(x_hat-x), 2)
-        error = np.mean(error_profile)
+        error_profile = np.sum(np.square(x_hat-x), 2)
+        error = np.sum(error_profile)
         
         if np.linalg.norm(dF) > 1000.0:
             raise Exception(str(np.linalg.norm(dFc)))
@@ -146,20 +176,23 @@ try:
         F, _ = opt.update((F, -dF), (Fc, -dFc))
 
         # F += c.lrate * dF
-        # F = normf(F)
+        F = normf(F)
         
         # Fc += c.lrate * dFc
         # Fc = normf(Fc)
+        # Fc = np.minimum(Fc, 0.5)
         Fc = np.dot(F.T, F) - np.eye(layer_size)
-
-        print "Epoch {}, err_acc {:.4f}, MSE {:.8f}, |gain|l2: {:.4f}".format(
+        if e % 10 == 0:
+            a_hist.append(a_seq.copy())
+        print "Epoch {}, err_acc {:.4f}, MSE {:.8f}".format(
             e, 
             err_acc,
             error,
-            np.mean(np.linalg.norm(gain_seq, axis=0))
         )
 except KeyboardInterrupt:
     pass
+
+a_hist = np.asarray(a_hist)
 
 # shm(a_seq, show=False)
 # shl(a_m_seq)
