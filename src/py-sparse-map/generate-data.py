@@ -4,7 +4,7 @@ from config import Config, dictionarize
 from util import *
 import yaml
 from os.path import join as pj
-import env
+import setup
 import struct
 import io_functions as io
 
@@ -40,7 +40,7 @@ for bi in xrange(c.batch_size):
     #             x_v[si, bi, ni] = 1.0
 
 
-yaml.dump(dictionarize(c), open(env.yaml_config, "w"))
+yaml.dump(dictionarize(c), open(setup.yaml_config, "w"))
 
 
-io.write_tensor(x_v, pj(env.work_dir, "input_data.bin")) 
+io.write_tensor(x_v, pj(setup.work_dir, "input_data.bin")) 

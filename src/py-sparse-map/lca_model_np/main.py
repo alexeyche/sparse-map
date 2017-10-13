@@ -34,8 +34,12 @@ class LCALayer(object):
             filter_len,
             layer_size
         )
+        
+        init_range = 2.0 * np.sqrt(6. / (filter_len * input_size + layer_size))
 
-        self.F = 1.0 * (np.random.uniform(size=(filter_len * input_size, layer_size)) - 0.5)
+        self.F = init_range * np.random.uniform(size=(filter_len * input_size, layer_size)) - init_range/2.0
+        
+        
         self.F = normf(self.F)
         self.F_init = self.F.copy()
 
@@ -101,7 +105,7 @@ class LCALayer(object):
         x_flat = self.x_win.reshape(self.batch_size, self.filter_len * self.input_size)
 
         if self.c.adaptive_threshold:
-            threshold = np.mean(self.a_m)
+            threshold = self.a_m #2.0*np.mean(self.a_m)
         else:
             threshold = self.c.lam
 
@@ -164,12 +168,12 @@ for bi in xrange(batch_size):
         # x[:,bi,ni] = generate_ts(seq_size)
         x[:,bi,ni] = np.diff(generate_ts(seq_size+1))
 
-x[:,0,0] = 1.0*np.sin(np.linspace(0, 250, seq_size)/10.0)/50.0
+# x[:,0,0] = 1.0*np.sin(np.linspace(0, 250, seq_size)/10.0)/50.0
 
 net = [
     LCALayer(batch_size, filter_len, input_size, layer_size),
     LCALayer(batch_size, filter_len/2, layer_size, layer_size/2),
-    LCALayer(batch_size, filter_len/2, layer_size/2, 10),
+    LCALayer(batch_size, filter_len/4, layer_size/2, 10),
 ]
 
 net[0].init_config(
@@ -183,7 +187,7 @@ net[0].init_config(
 net[1].init_config(
     adaptive_threshold=True,
     lam=0.005,
-    opt=SGDOpt((1.0, 1.0)),
+    opt=SGDOpt((2.0, 2.0)),
     # opt=MomentumOpt((0.05, 0.05), 0.9)
     # opt=AdamOpt((0.005, 0.005), beta1=0.9, beta2=0.999, eps=1e-05),
 )
@@ -202,7 +206,7 @@ net[2].init_config(
 
 
 try:
-    for e in xrange(10):
+    for e in xrange(500):
         [l.init(seq_size) for l in net]
 
         for ti in xrange(seq_size):
@@ -233,7 +237,9 @@ except KeyboardInterrupt:
 
 # shm(a_seq, show=False)
 # shl(a_m_seq)
-shl(x, net[0].x_hat, show=False)
-shm(net[0].a_seq, net[1].x_hat, show=True)
+# shl(x, net[0].x_hat, show=False)
+# shm(net[0].a_seq, net[1].x_hat, show=False)
+# shm(net[1].a_seq, net[2].x_hat, show=False)
+shl(net[-1].a_seq)
 
 # shm(F-F_init)
