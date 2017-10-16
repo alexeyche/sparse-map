@@ -7,9 +7,17 @@ import pylab
 from scipy import signal
 
 def shm(*matrices, **kwargs):
-    plt.figure(figsize=kwargs.get("figsize", (10,7)))
+    ncol = kwargs.get("subplot_col", 1)
+    nrow = len(matrices)
+
+    if ncol == 1:
+        plt.figure(figsize=kwargs.get("figsize", (10,7)))
+        
     for m_id, matrix in enumerate(matrices):
-        plt.subplot(len(matrices), 1, m_id+1)
+        plot_id = nrow*(ncol-1) + m_id+1
+        print nrow, ncol, plot_id
+        
+        plt.subplot(nrow, ncol, plot_id)
         plt.imshow(np.squeeze(matrix).T, cmap='gray', origin='lower')
         plt.colorbar()
 
