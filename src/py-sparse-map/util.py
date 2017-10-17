@@ -6,26 +6,36 @@ import collections
 import pylab
 from scipy import signal
 
-def shm(*matrices, **kwargs):
-    ncol = kwargs.get("subplot_col", 1)
-    nrow = len(matrices)
 
-    if ncol == 1:
-        plt.figure(figsize=kwargs.get("figsize", (10,7)))
-        
-    for m_id, matrix in enumerate(matrices):
-        plot_id = nrow*(ncol-1) + m_id+1
-        print nrow, ncol, plot_id
-        
-        plt.subplot(nrow, ncol, plot_id)
-        plt.imshow(np.squeeze(matrix).T, cmap='gray', origin='lower')
-        plt.colorbar()
+def plot_wrapper(fn):
+    def wrapper(*args, **kwargs):
+        ncols = kwargs.get("ncols", 1)
+        id = kwargs.get("id", 0)
+        nrows = len(args)
 
-    if kwargs.get("file"):
-        plt.savefig(kwargs["file"])
-        plt.clf()
-    elif kwargs.get("show", True):
-        plt.show()
+        if id == 0:
+            plt.figure(figsize=kwargs.get("figsize", (10,7)))
+
+        for a_id, a in enumerate(args):
+            plt.subplot(nrows, ncols, nrows*id + a_id+1)
+            fn(a, **kwargs)
+
+        if kwargs.get("file"):
+            plt.savefig(kwargs["file"])
+            plt.clf()
+        elif kwargs.get("show", True) and id+1 == ncols:
+            plt.show()
+
+    return wrapper
+
+
+
+@plot_wrapper
+def shm(matrix, **kwargs):
+    plt.imshow(np.squeeze(matrix).T, cmap='gray', origin='lower')
+    plt.colorbar()
+
+
 
 
 def smooth(signal, sigma=0.01, filter_size=50):
