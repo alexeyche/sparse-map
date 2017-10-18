@@ -2,7 +2,6 @@
 from tensorflow.examples.tutorials.mnist import input_data
 import tensorflow as tf
 import numpy as np
-import platform
 from util import *
 import os
 
@@ -117,11 +116,27 @@ sess.run(tf.global_variables_initializer())
 a_m_v = [np.zeros(l.a_m.get_shape().as_list()) for l in (l0, l1, l2)]
 
 train_batch_size = 100
-test_batch_size = 10000
+test_batch_size = 1000
 num_batches = mnist.train.num_examples/train_batch_size
+
+def test(epoch):
+	x_v, y_v = mnist.test.next_batch(test_batch_size) 
+	fs_v, Dv = sess.run(
+		( 
+			(final_state0, final_state1, final_state2), 
+			(l0.D, l1.D, l2.D)
+		), {
+			I: x_v, 
+			l0.a_m: a_m_v[0], 
+			l1.a_m: a_m_v[1],
+			l2.a_m: a_m_v[2]
+		}
+	)
+	shs(fs_v[-1][1], labels=(y_v,), file="{}/tmp/mnist_{}.png".format(os.environ["HOME"], epoch), figsize=(25,10))
+
 try:
 	
-	for e in xrange(30):
+	for e in xrange(1):
 		se_acc = np.zeros(layers_num)
 		for bi in xrange(num_batches):
 			x_v, y_v = mnist.train.next_batch(train_batch_size) 
@@ -147,19 +162,7 @@ try:
 			se_acc += np.asarray(se_v)/num_batches
 		
 		if e % 5 == 0:
-			x_v, y_v = mnist.test.next_batch(test_batch_size) 
-			fs_v, Dv = sess.run(
-				( 
-					(final_state0, final_state1, final_state2), 
-					(l0.D, l1.D, l2.D)
-				), {
-					I: x_v, 
-					l0.a_m: a_m_v[0], 
-					l1.a_m: a_m_v[1],
-					l2.a_m: a_m_v[2]
-				}
-			)
-			shs(fs_v[-1][1], labels=(y_v,), file="{}/tmp/mnist_{}.png".format(os.environ["HOME"], e))
+			test(e)
 
 			
 		print "Epoch {}, SE {}".format(e, ", ".join(["{:.4f}".format(se_l) for se_l in se_acc]))
@@ -168,3 +171,5 @@ try:
 	# 	a_v, Dv, I_hat_v = sess.run((a, D, I_hat), {I: x_v, layer.a_m: a_m_v})
 except KeyboardInterrupt:
 	pass
+
+test("final")

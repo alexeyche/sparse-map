@@ -75,7 +75,7 @@ def shs(*args, **kwargs):
     labels = kwargs.get("labels", [])
     make_pca = kwargs.get("make_pca", True)
 
-    plt.figure()
+    plt.figure(figsize=kwargs.get("figsize", (10,10)))
     
     for id, a in enumerate(args):
         if make_pca and a.shape[1] > 2:
