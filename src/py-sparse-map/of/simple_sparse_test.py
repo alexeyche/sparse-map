@@ -4,15 +4,22 @@ import tensorflow as tf
 import numpy as np
 from util import *
 import os
-from of.model import AELayer
+from of.model import SparseLayer
 
 input_size = 28*28
 layer_size = 144
 batch_size = 100
-lrate = 1e-04
+lam = 0.1
+threshold = 0.1
+h = 0.1
+lrate = 1e-03
+tau_m = 1000.0
+adapt_gain = 100.0
 
 np.random.seed(42)
 
+S = lambda x: tf.log(1.0 + tf.square(x))
+dS = lambda x: 2.0 * x / (tf.square(x) + 1.0)
 rs = lambda x: x.reshape(28, 28)
 ##
 
@@ -30,19 +37,25 @@ batch_size = tf.shape(I)[0]
 layers_num = 3
 
 l0, l1, l2 = (
-	AELayer(batch_size, input_size, layer_size),
-	AELayer(batch_size, layer_size, layer_size/2),
-	AELayer(batch_size, layer_size/2, 2),
+	SparseLayer(batch_size, input_size, layer_size, h, adapt_gain, tau_m),
+	SparseLayer(batch_size, layer_size, layer_size/2, h, adapt_gain, tau_m),
+	SparseLayer(batch_size, layer_size/2, 2, h, adapt_gain, tau_m),
 )
 
-l0s, se0 = l0(I)
-l1s, se1 = l1(l0s[-1])
-l2s, se2 = l2(l1s[-1])
+l0s = l0.init_state
+l1s = l1.init_state
+l2s = l2.init_state
+
+for _ in xrange(10):	
+	l0s, se0 = l0(l0s, I)
+	l1s, se1 = l1(l1s, l0s[-1])
+	l2s, se2 = l2(l2s, l1s[-1])
 
 
-final_state0 = l0s
-final_state1 = l1s
-final_state2 = l2s
+final_state0 = l0.final_state(l0s)
+final_state1 = l1.final_state(l1s)
+final_state2 = l2.final_state(l2s)
+
 
 
 
@@ -65,6 +78,8 @@ sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
 
+a_m_v = [np.zeros(l.a_m.get_shape().as_list()) for l in (l0, l1, l2)]
+
 train_batch_size = 100
 test_batch_size = 1000
 num_batches = mnist.train.num_examples/train_batch_size
@@ -76,14 +91,17 @@ def test(epoch):
 			(final_state0, final_state1, final_state2), 
 			(l0.D, l1.D, l2.D)
 		), {
-			I: x_v,
+			I: x_v, 
+			l0.a_m: a_m_v[0], 
+			l1.a_m: a_m_v[1],
+			l2.a_m: a_m_v[2]
 		}
 	)
-	shs(fs_v[-1][0], labels=(y_v,), file="{}/tmp/mnist_{}.png".format(os.environ["HOME"], epoch), figsize=(25,10))
+	shs(fs_v[-1][1], labels=(y_v,), file="{}/tmp/mnist_{}.png".format(os.environ["HOME"], epoch), figsize=(25,10))
 
 try:
 	
-	for e in xrange(30):
+	for e in xrange(1):
 		se_acc = np.zeros(layers_num)
 		for bi in xrange(num_batches):
 			x_v, y_v = mnist.train.next_batch(train_batch_size) 
@@ -92,14 +110,20 @@ try:
 				(
 					(final_state0, final_state1, final_state2),
 					(se0, se1, se2), 
-					apply_grad_step
+				) + (
+					(apply_grad_step,) if e > 0 else ()
 				), 
 				{
-					I: x_v
+					I: x_v,
+					l0.a_m: a_m_v[0],
+					l1.a_m: a_m_v[1],
+					l2.a_m: a_m_v[2]
 				}
 			)
 			final_state_v, se_v = sess_res[:2]
 			
+			a_m_v = tuple(fsv[-1] for fsv in final_state_v)
+
 			se_acc += np.asarray(se_v)/num_batches
 		
 		if e % 5 == 0:
