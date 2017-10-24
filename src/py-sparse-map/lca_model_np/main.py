@@ -36,37 +36,35 @@ for bi in xrange(batch_size):
         # x[:,bi,ni] = generate_ts(seq_size)
         x[:,bi,ni] = np.diff(generate_ts(seq_size+1))
 
-# x[:,0,0] = 1.0*np.sin(np.linspace(0, 250, seq_size)/10.0)/50.0
+# x[:,0,0] = 1.0*np.sin(np.linspace(0, 250, seq_size)/10.0)/10.0
 
 net = [
     LCALayer(batch_size, filter_len, input_size, layer_size),
-    LCALayer(batch_size, filter_len/2, layer_size, layer_size/2),
-    LCALayer(batch_size, filter_len/4, layer_size/2, 10),
+    LCALayer(batch_size, 1, layer_size, layer_size/2),
+    LCALayer(batch_size, 1, layer_size/2, 10),
 ]
 
 net[0].init_config(
     adaptive_threshold=True,
-    lam=0.005,
+    lam=0.1,
     opt=SGDOpt((1.0, 1.0)),
-    # opt=MomentumOpt((0.05, 0.05), 0.9)
-    # opt=AdamOpt((0.005, 0.005), beta1=0.9, beta2=0.999, eps=1e-05),
+    feedback_epsilon=-0.1,
+    adapt=1.0,
 )
 
 net[1].init_config(
     adaptive_threshold=True,
-    lam=0.005,
+    lam=0.1,
     opt=SGDOpt((2.0, 2.0)),
-    # opt=MomentumOpt((0.05, 0.05), 0.9)
-    # opt=AdamOpt((0.005, 0.005), beta1=0.9, beta2=0.999, eps=1e-05),
+    adapt=1.0,
 )
-
 net[2].init_config(
     adaptive_threshold=True,
-    lam=0.005,
+    lam=0.1,
     opt=SGDOpt((0.1, 0.1)),
-    # opt=MomentumOpt((0.05, 0.05), 0.9)
-    # opt=AdamOpt((0.005, 0.005), beta1=0.9, beta2=0.999, eps=1e-05),
+    adapt=1.0,
 )
+
 
 # opt = AdamOpt((0.01, 0.01), beta1=0.9, beta2=0.999, eps=1e-05)
 # opt = NesterovMomentumOpt((0.1, 0.1), 0.99)
@@ -74,7 +72,7 @@ net[2].init_config(
 
 
 try:
-    for e in xrange(500):
+    for e in xrange(100):
         [l.init(seq_size) for l in net]
 
         for ti in xrange(seq_size):
@@ -82,6 +80,12 @@ try:
             for layer in net:
                 layer(layer_input, ti)
                 layer_input = layer.a_seq
+                
+            for l_id, layer in reversed(list(enumerate(net))):
+                if l_id == len(net)-1:
+                    continue
+                # layer.feedback(np.mean(net[l_id+1].residuals, 1), ti)
+                layer.feedback(net[l_id+1].residuals[:,-1,:], ti)
 
         [l.learn() for l in net]
         

@@ -45,7 +45,8 @@ class LCALayer(object):
         c = Config()
 
         c.weight_init_factor = 0.3
-        c.epsilon = 1.0
+        c.epsilon = 0.1
+        c.feedback_epsilon = -0.1
         c.tau = 5.0
         c.grad_accum_rate = 1.0
 
@@ -82,6 +83,7 @@ class LCALayer(object):
 
         self.a_seq = np.zeros((seq_size, self.batch_size, self.layer_size))
         self.u_seq = np.zeros((seq_size, self.batch_size, self.layer_size))
+        self.td_seq = np.zeros((seq_size, self.batch_size, self.layer_size))
         self.a_m_seq = np.zeros((seq_size, self.batch_size, self.layer_size))
 
         self.x_win = np.zeros((self.batch_size, self.filter_len, self.input_size))
@@ -111,11 +113,12 @@ class LCALayer(object):
 
         x_hat_flat_t = np.dot(self.a, self.F.T)
         
-        error_part = x_flat - x_hat_flat_t
+        residuals_flat = x_flat - x_hat_flat_t
+        self.residuals = residuals_flat.reshape(self.batch_size, self.filter_len, self.input_size)
         
-        self.err_acc += np.linalg.norm(error_part)
+        self.err_acc += np.linalg.norm(residuals_flat)
         
-        self.dF += np.dot(error_part.T, self.a)
+        self.dF += np.dot(residuals_flat.T, self.a)
         self.dFc += np.dot(self.a.T, self.a)
 
         x_hat_t = x_hat_flat_t.reshape((self.batch_size, self.filter_len, self.input_size))
@@ -124,6 +127,10 @@ class LCALayer(object):
         self.a_seq[ti] = self.a
         self.u_seq[ti] = self.u
         self.a_m_seq[ti] = self.a_m
+
+    def feedback(self, top_down_signal, ti):
+        self.u += self.c.feedback_epsilon * top_down_signal
+        self.td_seq[ti] = top_down_signal.copy()
 
 
     def learn(self, sparse=False):
