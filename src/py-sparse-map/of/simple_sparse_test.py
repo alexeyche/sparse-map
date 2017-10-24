@@ -20,7 +20,7 @@ tf.set_random_seed(42)
 S = lambda x: tf.log(1.0 + tf.square(x))
 dS = lambda x: 2.0 * x / (tf.square(x) + 1.0)
 rs = lambda x: x.reshape(28, 28)
-##
+#
 
 	
 ################

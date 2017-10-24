@@ -3,7 +3,7 @@ import tensorflow as tf
 import numpy as np
 
 class SparseLayer(object):
-	def __init__(self, batch_size, input_size, layer_size, tau, h, adapt_gain, tau_m, feedback_const, ):
+	def __init__(self, batch_size, input_size, layer_size, tau, h, adapt_gain, tau_m, feedback_const, lam):
 		self.batch_size = batch_size
 		self.input_size = input_size
 		self.layer_size = layer_size
@@ -20,6 +20,8 @@ class SparseLayer(object):
 		self.tau_m = tau_m
 		self.feedback_const = feedback_const
 		self.tau = tau
+		self.lam = lam
+
 	@property
 	def init_state(self):
 		return tf.zeros(dtype=tf.float32, shape=(self.batch_size, self.layer_size)), tf.zeros(dtype=tf.float32, shape=(self.batch_size, self.layer_size))
@@ -37,7 +39,7 @@ class SparseLayer(object):
 
 		new_u = u + self.h * (-u + gain)/self.tau
 
-		return (new_u, tf.nn.relu(new_u - self.a_m)), se, r
+		return (new_u, tf.nn.relu(new_u - self.lam)), se, r
 
 	def final_state(self, state):
 		u, a = state
