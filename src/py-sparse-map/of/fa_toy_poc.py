@@ -171,7 +171,7 @@ def test(epoch):
 try:
 
 	ccc = None
-	for e in xrange(1):
+	for e in xrange(100):
 		init_states_v = init_state_fn()
 
 		feeds = {

@@ -113,7 +113,7 @@ class ReconstructionLayer(PredictiveCodingLayer):
 		new_mem = mem + self.h * (-mem + gain)/self.tau
 		
 		# y = self.act(new_mem - self.y_m)
-		y = self.act(new_mem - 0.5)
+		y = self.act(new_mem)
 		return (new_mem, y), residuals, x_hat
 
 	def get_grads_and_vars(self, state, x):
