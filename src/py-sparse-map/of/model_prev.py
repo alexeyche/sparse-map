@@ -39,7 +39,7 @@ class SparseLayer(object):
 
 		new_u = u + self.h * (-u + gain)/self.tau
 
-		return (new_u, tf.nn.relu(new_u - self.lam)), se, r
+		return (new_u, tf.nn.relu(new_u - self.a_m)), se, r
 
 	def final_state(self, state):
 		u, a = state

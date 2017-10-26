@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 from util import *
 import os
-from of.model import SparseLayer
+from of.model_prev import SparseLayer
 from sklearn.datasets import make_classification
 
 def get_toy_data(dest_dim, size, n_classes=2, seed=2):
@@ -68,7 +68,7 @@ I = tf.placeholder(tf.float32, shape=(None, input_size), name="I")
 
 batch_size = tf.shape(I)[0]
 
-net_structure = (layer_size, layer_size/2, 2)
+net_structure = (layer_size, 2)
 layers_num = len(net_structure)
 
 net = []
@@ -138,7 +138,7 @@ def test(epoch):
 	shs(fs_v[-1][1], labels=(labels,), file="{}/tmp/toy_{}.png".format(os.environ["HOME"], epoch), figsize=(25,10))
 
 try:
-	for e in xrange(1000):
+	for e in xrange(1):
 		feeds = {I: x_v}
 		feeds.update(
 			dict([(l.a_m, a_m_v_l) for l, a_m_v_l in zip(net, a_m_v)])

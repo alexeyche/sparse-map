@@ -3,7 +3,7 @@ import numpy as np
 from util import *
 import os
 from of.dataset import get_toy_data, one_hot_encode
-from of.model import ClassificationLayer, ClassificationLayerNonRec
+from of.model import ClassificationLayer, ClassificationLayerNonRec, ReconstructionLayer
 from of.model import bounded_relu
 
 input_size = 20
@@ -19,8 +19,7 @@ y_v = one_hot_encode(target_v)
 output_size = y_v.shape[1]
 
 # layer_size = 144
-layer_size = 100
-batch_size = 200
+layer_size = 50
 lam = 0.1
 lrate = 0.1
 # lrate = 0.0005
@@ -31,8 +30,9 @@ lrate = 0.1
 config = dict(
 	tau = 5.0,
 	tau_m = 1000.0,
-	adapt_gain = 1.0,
-	h = 0.1,
+	adapt_gain = 1000.0,
+	h = 0.2,
+	h_fb = -0.2
 )
 
 
@@ -41,7 +41,7 @@ y = tf.placeholder(tf.float32, shape=(None, output_size), name="y")
 
 batch_size = tf.shape(x)[0]
 
-net_structure = (output_size,)
+net_structure = (layer_size, output_size,)
 layers_num = len(net_structure)
 
 init_states = tuple(
@@ -61,7 +61,7 @@ for l_id, lsize in enumerate(net_structure[:-1]):
 
 
 	net.append(
-		SparseLayer(batch_size, input_to_layer, lsize, **config)
+		ReconstructionLayer(batch_size, input_to_layer, lsize, output_size, **config)
 	)
 
 
@@ -69,6 +69,7 @@ net.append(
 	ClassificationLayer(
 		batch_size, 
 		net_structure[-2] if len(net_structure) > 1 else input_size, 
+		output_size,
 		output_size,
 		act = tf.nn.softmax,
 		**config
@@ -84,21 +85,20 @@ reconstruction = [None]*layers_num
 states_acc = []
 residuals_acc = []
 
-for _ in xrange(20):
+for _ in xrange(30):
 	errors = []	
 		
 	for l_id, l in enumerate(net):
 		input_to_layer = x if l_id == 0 else states[l_id-1][-1]
 
-		states[l_id], reconstruction[l_id], residuals[l_id] = l(states[l_id], input_to_layer, y)
+		states[l_id], residuals[l_id], reconstruction[l_id] = l(states[l_id], input_to_layer, y)
 	
-	to_propagate = states[-1]
+	to_propagate = states[-1][-1]
 	
-	# for l_id, l in reversed(list(enumerate(net))):
-	# 	if l_id == len(net)-1:
-	# 		continue
-	# 	states[l_id] = l.feedback(states[l_id], to_propagate)	
-
+	for l_id, l in reversed(list(enumerate(net))):
+		if l_id == len(net)-1:
+			continue
+		states[l_id] = l.feedback(states[l_id], to_propagate)
 
 	error = tf.nn.l2_loss(reconstruction[-1] - y)
 	errors.append(error)
@@ -171,7 +171,7 @@ def test(epoch):
 try:
 
 	ccc = None
-	for e in xrange(2000):
+	for e in xrange(1):
 		init_states_v = init_state_fn()
 
 		feeds = {
@@ -188,6 +188,7 @@ try:
 			(
 				final_states,
 				errors, 
+				reconstruction,
 				states_acc,
 				residuals_acc,
 				grads_and_vars,
@@ -203,7 +204,7 @@ try:
 			for s in final_state_v
 		)
 
-		a_m_v = tuple(fsv[-1] for fsv in final_state_v)
+		y_m_v = tuple(fsv[-1] for fsv in final_state_v)
 
 		se_acc = np.asarray(se_v)
 		if np.linalg.norm(se_acc) < 1e-10:
@@ -225,9 +226,17 @@ try:
 except KeyboardInterrupt:
 	pass
 
-s_acc = np.squeeze(np.asarray(sess_res[2]))
-r_acc = np.squeeze(np.asarray(sess_res[3]))
-dD_v, D_v = sess_res[4][0]
+
+rec = np.squeeze(np.asarray(sess_res[2][-1]))
+
+read_d = lambda d, li, si: np.asarray([st[li][si] for st in d])
+
+l0_s_acc = read_d(sess_res[3], 0, 1)
+l1_s_acc = read_d(sess_res[3], 1, 1)
+
+# shs(l0_s_acc[-1], labels=(target_v,))
+
+# shm(rec[:20], y_v[:20])
 
 # shm(sess.run(tf.nn.softmax(s_acc[0][:10])), y_v[:10])
 

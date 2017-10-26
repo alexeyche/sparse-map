@@ -5,26 +5,19 @@ import numpy as np
 <<<<<<< HEAD
 import platform
 from util import *
-=======
-from util import *
 import os
 from of.model import AELayer
->>>>>>> a7b4e826feaa9d57bb8ce0454fa6380bc8c13c8d
 
 input_size = 28*28
 layer_size = 144
 batch_size = 100
-<<<<<<< HEAD
 lam = 0.1
 threshold = 0.1
 h = 0.1
-=======
->>>>>>> a7b4e826feaa9d57bb8ce0454fa6380bc8c13c8d
 lrate = 1e-04
 
 np.random.seed(42)
 
-<<<<<<< HEAD
 S = lambda x: tf.log(1.0 + tf.square(x))
 dS = lambda x: 2.0 * x / (tf.square(x) + 1.0)
 
