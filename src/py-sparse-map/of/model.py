@@ -6,6 +6,9 @@ def xavier_init(shape):
 	init_range = 2.0 * np.sqrt(6. / np.sum(shape))
 	return init_range * np.random.uniform(size=shape) - init_range/2.0
 
+def bounded_relu(x):
+	return tf.minimum(tf.nn.relu(x), 1.0)
+
 
 class PredictiveCodingLayer(object):
 	def __init__(
@@ -44,13 +47,13 @@ class PredictiveCodingLayer(object):
 	def get_grads_and_vars(self, state, x):
 		mem, y = state
 		
-		# dD = tf.matmul(tf.transpose(x), y)/tf.cast(self.batch_size, tf.float32)
+		dD = -tf.matmul(tf.transpose(x), y)
 
 		# r = x - tf.matmul(y - self.y_m, tf.transpose(self.D))
-		r = x - tf.matmul(y, tf.transpose(self.D))
-		dD = tf.matmul(tf.transpose(r), y)/tf.cast(self.batch_size, tf.float32)
+		# r = x - tf.matmul(y, tf.transpose(self.D))
+		# dD = -tf.matmul(tf.transpose(r), y)
 		
-		return [(dD, self.D)]
+		return [(dD/tf.cast(self.batch_size, tf.float32), self.D)]
 
 	def feedback(self, state, top_down_signal):
 		mem, y = state
@@ -75,49 +78,72 @@ class ClassificationLayerNonRec(PredictiveCodingLayer):
 		batch_size, 
 		input_size, 
 		layer_size, 
-		generative_act = tf.nn.softmax,
 		**kwargs
 	):
 		super(ClassificationLayerNonRec, self).__init__(
 			batch_size, 
 			input_size, 
 			layer_size, 
-			act=tf.identity,
 			**kwargs
 		)
-		self.generative_act = generative_act
 
 
 	def __call__(self, state, x, y_t):
-		mem, y = state
-
-		y_hat = self.generative_act(tf.matmul(x, self.D))
-		residuals = y_hat - y_t
-
-		new_mem = mem + self.h * (-mem + residuals)/self.tau
+		new_mem = tf.matmul(x, self.D)
+		y_hat = self.act(new_mem)
 		
-		y = self.act(new_mem)
-		return (new_mem, y), residuals
+		residuals = y_t - y_hat
+		
+		return (new_mem, residuals), y_hat, residuals
 
 
-def bounded_relu(x):
-	return tf.minimum(tf.nn.relu(x), 1.0)
+def way0(self, y_t, y, x):
+	x_t = tf.matmul(y_t, tf.transpose(self.D))
+	x_hat = tf.matmul(y, tf.transpose(self.D))
+
+	residuals = x_t - x_hat
+
+	gain = tf.matmul(residuals, self.D)
+
+	return residuals, gain
+
+def way1(self, y_t, y, x):
+	x_t = tf.matmul(y_t, tf.transpose(self.D))
+	x_hat = tf.matmul(tf.matmul(x, self.D), tf.transpose(self.D))
+	residuals = x_t - x_hat
+
+	return residuals, residuals, y_hat
+
+def way2(self, y_t, y, x):
+	y_hat = tf.matmul(x, self.D)
+	
+	residuals = tf.matmul(y_t - y_hat, tf.transpose(self.D))
+	
+	gain = tf.matmul(residuals, self.D)
+	return residuals, gain, y_hat
+
+def way3(self, y_t, y, x):
+	y_hat = self.act(tf.matmul(x, self.D))
+	
+	residuals = y_t - y_hat
+	
+	gain = residuals
+	return residuals, gain, y_hat
 
 class ClassificationLayer(PredictiveCodingLayer):
 	def __call__(self, state, x, y_t):
 		mem, y = state
+		
+		residuals, gain = way0(self, y_t, y, x)
+		# residuals, gain = way1(self, y_t, y, x)
+		# residuals, gain = way2(self, y_t, y, x)
+		# residuals, gain = way3(self, y_t, y, x)
 
-		x_t = tf.matmul(y_t, tf.transpose(self.D))
-		x_hat = tf.matmul(y, tf.transpose(self.D))
-
-		residuals = x_t - x_hat
-
-		gain = tf.matmul(residuals, self.D)
 
 		new_mem = mem + self.h * (-mem + gain)/self.tau
 		
-		y = self.act(new_mem)
-		return (new_mem, y), residuals
+		
+		return (new_mem, new_mem), y_hat, residuals
 
 
 class ReconstructionLayer(PredictiveCodingLayer):

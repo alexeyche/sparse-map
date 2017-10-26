@@ -8,19 +8,23 @@ from of.model import bounded_relu
 
 input_size = 20
 
-x_v, target_v = get_toy_data(input_size, 2000)
-y_v = one_hot_encode(target_v)
+np.random.seed(43)
+tf.set_random_seed(43)
 
+
+x_v, target_v = get_toy_data(input_size, 2000)
+# x_v = x_v[:5]
+y_v = one_hot_encode(target_v)
+# y_v = y_v[:5]
 output_size = y_v.shape[1]
 
 # layer_size = 144
-layer_size = 200
-batch_size = 2000
+layer_size = 100
+batch_size = 200
 lam = 0.1
-lrate = 0.05
+lrate = 0.1
+# lrate = 0.0005
 
-np.random.seed(42)
-tf.set_random_seed(42)
 
 #################
 
@@ -66,7 +70,7 @@ net.append(
 		batch_size, 
 		net_structure[-2] if len(net_structure) > 1 else input_size, 
 		output_size,
-		act = bounded_relu,
+		act = tf.nn.softmax,
 		**config
 	)
 )
@@ -75,53 +79,61 @@ net.append(
 states = list(init_states)
 # states = [l.init_state for l in net]
 residuals = [None]*layers_num
+reconstruction = [None]*layers_num
 
 states_acc = []
 residuals_acc = []
 
-for _ in xrange(30):
+for _ in xrange(20):
 	errors = []	
 		
 	for l_id, l in enumerate(net):
 		input_to_layer = x if l_id == 0 else states[l_id-1][-1]
 
-		states[l_id], residuals[l_id] = l(states[l_id], input_to_layer, y)
+		states[l_id], reconstruction[l_id], residuals[l_id] = l(states[l_id], input_to_layer, y)
 	
-	# input_to_last_layer = x if len(net) == 1 else states[-2][-1]
-	# states[-1], residuals[-1] = net[-1](states[-1], input_to_last_layer, y)
-	to_propagate = residuals[-1]
+	to_propagate = states[-1]
 	
-	for l_id, l in reversed(list(enumerate(net))):
-		if l_id == len(net)-1:
-			continue
-		states[l_id] = l.feedback(states[l_id], to_propagate)	
+	# for l_id, l in reversed(list(enumerate(net))):
+	# 	if l_id == len(net)-1:
+	# 		continue
+	# 	states[l_id] = l.feedback(states[l_id], to_propagate)	
 
 
-	error = tf.nn.l2_loss(states[-1][-1] - y)
+	error = tf.nn.l2_loss(reconstruction[-1] - y)
 	errors.append(error)
 
 	# states[0] = (tf.Print(states[0][0], [error]),) + states[0][1:]
 
-	states_acc.append([tf.identity(ss) for s in states for ss in s])
+	states_acc.append(tuple(
+		tuple(tf.identity(ss) for ss in s)
+		for s in states
+	))
 	residuals_acc.append([tf.identity(rr) for rr in residuals])
+
 
 final_states = tuple([l.final_state(ls) for l, ls in zip(net, states)])
 
+##########################
 
 # optimizer = tf.train.AdamOptimizer(lrate)
 optimizer = tf.train.GradientDescentOptimizer(lrate)
-
-grads_and_vars = [
-	g_v 
+grads_and_vars = tuple(
+	g_v
 	for l_id, (l, s) in enumerate(zip(net, states))
-	   for g_v in l.get_grads_and_vars(s, x if l_id == 0 else states[l_id-1][-1])
-]
+  	for g_v in l.get_grads_and_vars(s, x if l_id == 0 else states[l_id-1][-1])
+)
+
 
 apply_grads_step = tf.group(
     optimizer.apply_gradients(grads_and_vars),
 )
 
+# apply_grads_step = tf.group(
+#     optimizer.minimize(errors[0]),
+# )
 
+# real_grad = tf.gradients(errors[0], [net[0].D])[0]
 
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
@@ -159,9 +171,11 @@ def test(epoch):
 try:
 
 	ccc = None
-	for e in xrange(1):
+	for e in xrange(2000):
+		init_states_v = init_state_fn()
+
 		feeds = {
-			x: x_v, 
+			x: x_v,
 			y: y_v,
 			init_states: init_states_v
 		}
@@ -169,6 +183,7 @@ try:
 		feeds.update(
 			dict([(l.y_m, y_m_v_l) for l, y_m_v_l in zip(net, y_m_v)])
 		)
+
 		sess_res = sess.run(
 			(
 				final_states,
@@ -195,7 +210,7 @@ try:
 			raise KeyboardInterrupt
 		
 		if not ccc is None and se_acc[0] - ccc > 2.0:
-			print "To big error: {}".format(se_acc[0] - ccc)
+			print "Too big error: {}".format(se_acc[0] - ccc)
 			raise KeyboardInterrupt
 
 		ccc = se_acc[0]
@@ -212,5 +227,9 @@ except KeyboardInterrupt:
 
 s_acc = np.squeeze(np.asarray(sess_res[2]))
 r_acc = np.squeeze(np.asarray(sess_res[3]))
+dD_v, D_v = sess_res[4][0]
+
+# shm(sess.run(tf.nn.softmax(s_acc[0][:10])), y_v[:10])
+
 # test("final")
-shl(s_acc[:,1,0,:])
+# shl(s_acc[:,1,0,:])
